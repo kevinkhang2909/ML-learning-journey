@@ -1,5 +1,5 @@
 from torch.utils.data import Dataset
-import albumentations
+from albumentations import Compose, Resize, Normalize, HorizontalFlip, VerticalFlip, Rotate, CenterCrop
 from albumentations.pytorch.transforms import ToTensorV2
 import cv2
 import math
@@ -9,7 +9,6 @@ import torch.nn as nn
 from torch.nn import functional as F, Parameter
 import matplotlib.pyplot as plt
 import numpy as np
-
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
@@ -27,16 +26,13 @@ class ShopeeNet(nn.Module):
                  margin=0.50,
                  ls_eps=0.0,
                  theta_zero=0.785,
-                 pretrained=False):
+                 pretrained=True):
         """
-        :param n_classes:
-        :param model_name: name of model from pretrainedmodels
-            e.g. resnet50, resnext101_32x4d, pnasnet5large
-        :param pooling: One of ('SPoC', 'MAC', 'RMAC', 'GeM', 'Rpool', 'Flatten', 'CompactBilinearPooling')
+        :param model_name: name of model from pretrainedmodels e.g. resnet50, resnext101_32x4d, pnasnet5large
         :param loss_module: One of ('arcface', 'cosface', 'softmax')
         """
         super(ShopeeNet, self).__init__()
-        print('Model building for {} backbone'.format(model_name))
+        print(f'Building Model Backbone for {model_name} model')
 
         self.backbone = timm.create_model(model_name, pretrained=pretrained)
         final_in_features = self.backbone.classifier.in_features
@@ -56,7 +52,8 @@ class ShopeeNet(nn.Module):
 
         self.loss_module = loss_module
         if loss_module == 'arcface':
-            self.final = ArcMarginProduct(final_in_features, n_classes, s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
+            self.final = ArcMarginProduct(final_in_features, n_classes,
+                                          s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
         elif loss_module == 'cosface':
             self.final = AddMarginProduct(final_in_features, n_classes, s=s, m=margin)
         elif loss_module == 'adacos':
@@ -76,7 +73,7 @@ class ShopeeNet(nn.Module):
             logits = self.final(feature, label)
         else:
             logits = self.final(feature)
-        return feature, logits
+        return logits
 
     def extract_feat(self, x):
         batch_size = x.shape[0]
@@ -92,28 +89,35 @@ class ShopeeNet(nn.Module):
 
 
 class ShopeeDataset(Dataset):
-    def __init__(self, image_paths, transforms=None):
-        self.image_paths = image_paths
-        self.augmentations = transforms
+    def __init__(self, csv, train):
+        self.csv = csv.reset_index()
+        self.train = train
+        self.transform = Compose([VerticalFlip(p=0.5),
+                                  HorizontalFlip(p=0.5),
+                                  Resize(256, 256),
+                                  Normalize(),
+                                  ])
 
     def __len__(self):
-        return self.image_paths.shape[0]
+        return len(self.csv)
 
     def __getitem__(self, index):
-        image_path = self.image_paths[index]
-
-        image = cv2.imread(image_path)
+        image = cv2.imread(self.csv["filepath"][index])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_transf = self.transform(image=image)["image"].astype(np.float32)
+        image_transf = torch.tensor(image_transf.transpose(2, 0, 1))
 
-        if self.augmentations:
-            augmented = self.augmentations(image=image)
-            image = augmented['image']
+        # Return dataset info
+        if self.train == True:
+            label_group = torch.tensor(self.csv["label_group"][index])
+            return image_transf, label_group
 
-        return image, torch.tensor(1)
+        else:
+            return image_transf
 
 
 class AdaCos(nn.Module):
-    def __init__(self, in_features, out_features, m=0.50, ls_eps=0, theta_zero=math.pi/4):
+    def __init__(self, in_features, out_features, m=0.50, ls_eps=0, theta_zero=math.pi / 4):
         super(AdaCos, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -124,13 +128,13 @@ class AdaCos(nn.Module):
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
         nn.init.xavier_uniform_(self.weight)
 
-    def forward(self, input, label):
+    def forward(self, input_dim, label):
         # normalize features
-        x = F.normalize(input)
+        x = F.normalize(input_dim)
         # normalize weights
-        W = F.normalize(self.weight)
+        w = F.normalize(self.weight)
         # dot product
-        logits = F.linear(x, W)
+        logits = F.linear(x, w)
         # add margin
         theta = torch.acos(torch.clamp(logits, -1.0 + 1e-7, 1.0 - 1e-7))
         target_logits = torch.cos(theta + self.m)
@@ -141,25 +145,16 @@ class AdaCos(nn.Module):
         output = logits * (1 - one_hot) + target_logits * one_hot
         # feature re-scale
         with torch.no_grad():
-            B_avg = torch.where(one_hot < 1, torch.exp(self.s * logits), torch.zeros_like(logits))
-            B_avg = torch.sum(B_avg) / input.size(0)
+            b_avg = torch.where(one_hot < 1, torch.exp(self.s * logits), torch.zeros_like(logits))
+            b_avg = torch.sum(b_avg) / input_dim.size(0)
             theta_med = torch.median(theta)
-            self.s = torch.log(B_avg) / torch.cos(torch.min(self.theta_zero * torch.ones_like(theta_med), theta_med))
+            self.s = torch.log(b_avg) / torch.cos(torch.min(self.theta_zero * torch.ones_like(theta_med), theta_med))
         output *= self.s
 
         return output
 
 
 class AddMarginProduct(nn.Module):
-    r"""Implement of large margin cosine distance: :
-    Args:
-        in_features: size of each input sample
-        out_features: size of each output sample
-        s: norm of input feature
-        m: margin
-        cos(theta) - m
-    """
-
     def __init__(self, in_features, out_features, s=30.0, m=0.40):
         super(AddMarginProduct, self).__init__()
         self.in_features = in_features
@@ -169,16 +164,17 @@ class AddMarginProduct(nn.Module):
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
         nn.init.xavier_uniform_(self.weight)
 
-    def forward(self, input, label):
+    def forward(self, input_dim, label):
         # --------------------------- cos(theta) & phi(theta) ---------------------------
-        cosine = F.linear(F.normalize(input), F.normalize(self.weight))
+        cosine = F.linear(F.normalize(input_dim), F.normalize(self.weight))
         phi = cosine - self.m
         # --------------------------- convert label to one-hot ---------------------------
         one_hot = torch.zeros(cosine.size(), device='cuda')
         # one_hot = one_hot.cuda() if cosine.is_cuda else one_hot
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
-        output = (one_hot * phi) + ((1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
+        output = (one_hot * phi) + (
+                (1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
         output *= self.s
         # print(output)
 
@@ -186,7 +182,7 @@ class AddMarginProduct(nn.Module):
 
 
 class ArcMarginProduct(nn.Module):
-    def __init__(self, in_feature=128, out_feature=10575, s=32.0, m=0.50, easy_margin=False):
+    def __init__(self, in_feature=128, out_feature=10575, s=30.0, m=0.50, easy_margin=False, ls_eps=0.0):
         """
         :param in_feature:
         :param out_feature:
@@ -199,6 +195,7 @@ class ArcMarginProduct(nn.Module):
         self.out_feature = out_feature
         self.s = s
         self.m = m
+        self.ls_eps = ls_eps
         self.weight = Parameter(torch.Tensor(out_feature, in_feature))
         nn.init.xavier_uniform_(self.weight)
 
@@ -222,46 +219,33 @@ class ArcMarginProduct(nn.Module):
         else:
             phi = torch.where((cosine - self.th) > 0, phi, cosine - self.mm)
 
-        #one_hot = torch.zeros(cosine.size(), device='cuda' if torch.cuda.is_available() else 'cpu')
         one_hot = torch.zeros_like(cosine)
         one_hot.scatter_(1, label.view(-1, 1), 1)
+        if self.ls_eps > 0:
+            one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.out_features
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
         output = output * self.s
 
         return output
 
 
-def get_train_transforms(dim):
-    transform = albumentations.Compose(
-        [
-            albumentations.Resize(dim[0], dim[1], always_apply=True),
-            albumentations.HorizontalFlip(p=0.5),
-            albumentations.VerticalFlip(p=0.5),
-            albumentations.Rotate(limit=120, p=0.8),
-            albumentations.RandomBrightnessContrast(p=0.5),
-            albumentations.Normalize(),
-            ToTensorV2(p=1.0),
-        ]
-    )
-    return transform
-
-
-def displayDF(train, path, random=False, COLS=6, ROWS=4):
-    for k in range(ROWS):
+def display_df(train, path, random=False, cols=6, rows=4):
+    for k in range(rows):
         plt.figure(figsize=(20, 5))
-        for j in range(COLS):
+        for j in range(cols):
             if random:
                 row = np.random.randint(0, len(train))
             else:
-                row = COLS * k + j
+                row = cols * k + j
             name = train.iloc[row, 1]
             title = str(train.iloc[row, 3])
             title_with_return = ""
             for i, ch in enumerate(title):
                 title_with_return += ch
-                if (i != 0) & (i % 20 == 0): title_with_return += '\n'
+                if (i != 0) & (i % 20 == 0):
+                    title_with_return += '\n'
             img = cv2.imread(str(path / name))
-            plt.subplot(1, COLS, j + 1)
+            plt.subplot(1, cols, j + 1)
             plt.title(title_with_return)
             plt.axis('off')
             plt.imshow(img)
@@ -276,3 +260,9 @@ def f1_score_cal(y_true, y_pred):
     len_y_true = y_true.apply(lambda x: len(x)).values
     f1 = 2 * intersection / (len_y_pred + len_y_true)
     return f1
+
+
+def plot_image(img_path):
+    plt.figure(figsize=(20, 5))
+    img = cv2.imread(img_path)
+    plt.imshow(img)
