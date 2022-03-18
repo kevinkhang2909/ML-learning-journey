@@ -229,16 +229,13 @@ class ArcMarginProduct(nn.Module):
         return output
 
 
-def display_df(train, path, random=False, cols=6, rows=4):
+def display_df(df, path, cols=6, rows=4):
     for k in range(rows):
         plt.figure(figsize=(20, 5))
         for j in range(cols):
-            if random:
-                row = np.random.randint(0, len(train))
-            else:
-                row = cols * k + j
-            name = train.iloc[row, 1]
-            title = str(train.iloc[row, 3])
+            row = cols * k + j
+            name = df['filepath'].tolist()[row]
+            title = df['title'].tolist()[row]
             title_with_return = ""
             for i, ch in enumerate(title):
                 title_with_return += ch
@@ -252,14 +249,9 @@ def display_df(train, path, random=False, cols=6, rows=4):
         plt.show()
 
 
-def f1_score_cal(y_true, y_pred):
-    y_true = y_true.apply(lambda x: set(x.split()))
-    y_pred = y_pred.apply(lambda x: set(x.split()))
-    intersection = np.array([len(x[0] & x[1]) for x in zip(y_true, y_pred)])
-    len_y_pred = y_pred.apply(lambda x: len(x)).values
-    len_y_true = y_true.apply(lambda x: len(x)).values
-    f1 = 2 * intersection / (len_y_pred + len_y_true)
-    return f1
+def f1_score_cal(target, predict):
+    intersection = len(np.intersect1d(target, predict))
+    return 2 * intersection / (len(target) + len(predict))
 
 
 def plot_image(img_path):
