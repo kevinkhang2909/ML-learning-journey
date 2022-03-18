@@ -94,7 +94,7 @@ class ShopeeDataset(Dataset):
         self.train = train
         self.transform = Compose([VerticalFlip(p=0.5),
                                   HorizontalFlip(p=0.5),
-                                  Resize(256, 256),
+                                  Resize(512, 512),
                                   Normalize(),
                                   ])
 
@@ -229,18 +229,27 @@ class ArcMarginProduct(nn.Module):
         return output
 
 
+def edit_title(text):
+    title_with_return = ""
+    for i, ch in enumerate(text):
+        title_with_return += ch
+        if (i != 0) & (i % 20 == 0):
+            title_with_return += '\n'
+    return title_with_return
+
+
 def display_df(df, path, cols=6, rows=4):
+    cols = max(min(cols, df.shape[0]) - 1, df.shape[0])
+    rows = max(int(df.shape[0] / rows), 1)
     for k in range(rows):
         plt.figure(figsize=(20, 5))
         for j in range(cols):
             row = cols * k + j
+
             name = df['filepath'].tolist()[row]
             title = df['title'].tolist()[row]
-            title_with_return = ""
-            for i, ch in enumerate(title):
-                title_with_return += ch
-                if (i != 0) & (i % 20 == 0):
-                    title_with_return += '\n'
+            title_with_return = edit_title(title)
+
             img = cv2.imread(str(path / name))
             plt.subplot(1, cols, j + 1)
             plt.title(title_with_return)
@@ -254,7 +263,13 @@ def f1_score_cal(target, predict):
     return 2 * intersection / (len(target) + len(predict))
 
 
-def plot_image(img_path):
+def plot_image(df):
+    img_path = df['filepath'].item()
+    title = df['title'].item()
+    title_with_return = edit_title(title)
+
     plt.figure(figsize=(20, 5))
+    plt.title(title_with_return)
     img = cv2.imread(img_path)
     plt.imshow(img)
+    plt.show()
