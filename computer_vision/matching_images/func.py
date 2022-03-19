@@ -94,7 +94,7 @@ class ShopeeDataset(Dataset):
         self.train = train
         self.transform = Compose([VerticalFlip(p=0.5),
                                   HorizontalFlip(p=0.5),
-                                  Resize(512, 512),
+                                  Resize(256, 256),
                                   Normalize(),
                                   ])
 
