@@ -6,6 +6,10 @@ from sparse_dot_topn import awesome_cossim_topn
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
+def clean_text(text):
+    return str(text).lower().strip()
+
+
 def ngrams_func(string, n=3):
     string = sub(r'[,-./]|\sBD', r'', string)
     ngrams = zip(*[string[i:] for i in range(n)])

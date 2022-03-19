@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
-from albumentations import Compose, Resize, Normalize, HorizontalFlip, VerticalFlip, Rotate, CenterCrop
-from albumentations.pytorch.transforms import ToTensorV2
+from albumentations import Compose, Resize, Normalize, HorizontalFlip, VerticalFlip
+import pandas as pd
 import cv2
 import math
 import timm
@@ -9,9 +9,11 @@ import torch.nn as nn
 from torch.nn import functional as F, Parameter
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-print(device)
+path = Path.home() / 'OneDrive - Seagroup/computer_vison/shopee_item_images/'
+path_img = path / 'train_images'
 
 
 class ShopeeNet(nn.Module):
@@ -239,23 +241,23 @@ def edit_title(text):
 
 
 def display_df(df, path, cols=6, rows=4):
-    cols = max(min(cols, df.shape[0]) - 1, df.shape[0])
-    rows = max(int(df.shape[0] / rows), 1)
-    for k in range(rows):
-        plt.figure(figsize=(20, 5))
-        for j in range(cols):
-            row = cols * k + j
+        for k in range(rows):
+            try:
+                plt.figure(figsize=(20, 5))
+                for j in range(cols):
+                    row = cols * k + j
+                    name = df['filepath'].tolist()[row]
+                    title = df['title'].tolist()[row]
+                    title_with_return = edit_title(title)
 
-            name = df['filepath'].tolist()[row]
-            title = df['title'].tolist()[row]
-            title_with_return = edit_title(title)
-
-            img = cv2.imread(str(path / name))
-            plt.subplot(1, cols, j + 1)
-            plt.title(title_with_return)
-            plt.axis('off')
-            plt.imshow(img)
-        plt.show()
+                    img = cv2.imread(str(path / name))
+                    plt.subplot(1, cols, j + 1)
+                    plt.title(title_with_return)
+                    plt.axis('off')
+                    plt.imshow(img)
+                plt.show()
+            except IndexError:
+                break
 
 
 def f1_score_cal(target, predict):
@@ -273,3 +275,18 @@ def plot_image(df):
     img = cv2.imread(img_path)
     plt.imshow(img)
     plt.show()
+
+
+def clean_text(text):
+    return str(text).lower().strip()
+
+
+def get_data(path):
+    df = pd.read_csv(path)
+
+    # clean
+    df['filepath'] = df['image'].map(lambda x: str(path_img / x))
+    group_dicts = df.groupby('label_group')["posting_id"].apply(set).apply(list).to_dict()
+    df['target'] = df["label_group"].map(group_dicts)
+    df['title_edit'] = df['title'].map(clean_text)
+    return df
