@@ -1,5 +1,5 @@
 from torch.utils.data import Dataset
-from albumentations import Compose, Resize, Normalize, HorizontalFlip, VerticalFlip
+from albumentations import Compose, Resize, Normalize
 import pandas as pd
 import cv2
 import math
@@ -10,6 +10,9 @@ from torch.nn import functional as F, Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+from torch.optim.lr_scheduler import _LRScheduler, CosineAnnealingWarmRestarts, CosineAnnealingLR, ReduceLROnPlateau
+import warnings
+from tqdm import tqdm
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 path = Path.home() / 'OneDrive - Seagroup/computer_vison/shopee_item_images/'
@@ -54,12 +57,7 @@ class ShopeeNet(nn.Module):
 
         self.loss_module = loss_module
         if loss_module == 'arcface':
-            self.final = ArcMarginProduct(final_in_features, n_classes,
-                                          s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
-        elif loss_module == 'cosface':
-            self.final = AddMarginProduct(final_in_features, n_classes, s=s, m=margin)
-        elif loss_module == 'adacos':
-            self.final = AdaCos(final_in_features, n_classes, m=margin, theta_zero=theta_zero)
+            self.final = ArcMarginProduct(final_in_features, n_classes, s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
         else:
             self.final = nn.Linear(final_in_features, n_classes)
 
@@ -94,9 +92,7 @@ class ShopeeDataset(Dataset):
     def __init__(self, csv, train):
         self.csv = csv.reset_index()
         self.train = train
-        self.transform = Compose([VerticalFlip(p=0.5),
-                                  HorizontalFlip(p=0.5),
-                                  Resize(256, 256),
+        self.transform = Compose([Resize(512, 512),
                                   Normalize(),
                                   ])
 
@@ -118,117 +114,152 @@ class ShopeeDataset(Dataset):
             return image_transf
 
 
-class AdaCos(nn.Module):
-    def __init__(self, in_features, out_features, m=0.50, ls_eps=0, theta_zero=math.pi / 4):
-        super(AdaCos, self).__init__()
+class ArcMarginProduct(nn.Module):
+    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False, ls_eps=0.0):
+        super(ArcMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.theta_zero = theta_zero
-        self.s = math.log(out_features - 1) / math.cos(theta_zero)
+        self.s = s
         self.m = m
         self.ls_eps = ls_eps  # label smoothing
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
         nn.init.xavier_uniform_(self.weight)
 
-    def forward(self, input_dim, label):
-        # normalize features
-        x = F.normalize(input_dim)
-        # normalize weights
-        w = F.normalize(self.weight)
-        # dot product
-        logits = F.linear(x, w)
-        # add margin
-        theta = torch.acos(torch.clamp(logits, -1.0 + 1e-7, 1.0 - 1e-7))
-        target_logits = torch.cos(theta + self.m)
-        one_hot = torch.zeros_like(logits)
-        one_hot.scatter_(1, label.view(-1, 1).long(), 1)
-        if self.ls_eps > 0:
-            one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.out_features
-        output = logits * (1 - one_hot) + target_logits * one_hot
-        # feature re-scale
-        with torch.no_grad():
-            b_avg = torch.where(one_hot < 1, torch.exp(self.s * logits), torch.zeros_like(logits))
-            b_avg = torch.sum(b_avg) / input_dim.size(0)
-            theta_med = torch.median(theta)
-            self.s = torch.log(b_avg) / torch.cos(torch.min(self.theta_zero * torch.ones_like(theta_med), theta_med))
-        output *= self.s
-
-        return output
-
-
-class AddMarginProduct(nn.Module):
-    def __init__(self, in_features, out_features, s=30.0, m=0.40):
-        super(AddMarginProduct, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.s = s
-        self.m = m
-        self.weight = Parameter(torch.FloatTensor(out_features, in_features))
-        nn.init.xavier_uniform_(self.weight)
-
-    def forward(self, input_dim, label):
-        # --------------------------- cos(theta) & phi(theta) ---------------------------
-        cosine = F.linear(F.normalize(input_dim), F.normalize(self.weight))
-        phi = cosine - self.m
-        # --------------------------- convert label to one-hot ---------------------------
-        one_hot = torch.zeros(cosine.size(), device='cuda')
-        # one_hot = one_hot.cuda() if cosine.is_cuda else one_hot
-        one_hot.scatter_(1, label.view(-1, 1).long(), 1)
-        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
-        output = (one_hot * phi) + (
-                (1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
-        output *= self.s
-        # print(output)
-
-        return output
-
-
-class ArcMarginProduct(nn.Module):
-    def __init__(self, in_feature=128, out_feature=10575, s=30.0, m=0.50, easy_margin=False, ls_eps=0.0):
-        """
-        :param in_feature:
-        :param out_feature:
-        :param s:
-        :param m:
-        :param easy_margin:
-        """
-        super(ArcMarginProduct, self).__init__()
-        self.in_feature = in_feature
-        self.out_feature = out_feature
-        self.s = s
-        self.m = m
-        self.ls_eps = ls_eps
-        self.weight = Parameter(torch.Tensor(out_feature, in_feature))
-        nn.init.xavier_uniform_(self.weight)
-
         self.easy_margin = easy_margin
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
-
-        # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
         self.th = math.cos(math.pi - m)
         self.mm = math.sin(math.pi - m) * m
 
-    def forward(self, x, label):
-        # cos(theta)
-        cosine = F.linear(F.normalize(x), F.normalize(self.weight))
-        # cos(theta + m)
+    def forward(self, input, label):
+        # --------------------------- cos(theta) & phi(theta) ---------------------------
+        cosine = F.linear(F.normalize(input), F.normalize(self.weight))
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
         phi = cosine * self.cos_m - sine * self.sin_m
-
         if self.easy_margin:
             phi = torch.where(cosine > 0, phi, cosine)
         else:
-            phi = torch.where((cosine - self.th) > 0, phi, cosine - self.mm)
-
-        one_hot = torch.zeros_like(cosine)
-        one_hot.scatter_(1, label.view(-1, 1), 1)
+            phi = torch.where(cosine > self.th, phi, cosine - self.mm)
+        # --------------------------- convert label to one-hot ---------------------------
+        # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
+        one_hot = torch.zeros(cosine.size(), device='cuda')
+        one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         if self.ls_eps > 0:
             one_hot = (1 - self.ls_eps) * one_hot + self.ls_eps / self.out_features
+        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
-        output = output * self.s
+        output *= self.s
 
         return output
+
+
+class ShopeeScheduler(_LRScheduler):
+    def __init__(self, optimizer, lr_start=5e-6, lr_max=1e-5,
+                 lr_min=1e-6, lr_ramp_ep=5, lr_sus_ep=0, lr_decay=0.8,
+                 last_epoch=-1):
+        self.lr_start = lr_start
+        self.lr_max = lr_max
+        self.lr_min = lr_min
+        self.lr_ramp_ep = lr_ramp_ep
+        self.lr_sus_ep = lr_sus_ep
+        self.lr_decay = lr_decay
+        super(ShopeeScheduler, self).__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        if not self._get_lr_called_within_step:
+            warnings.warn("To get the last learning rate computed by the scheduler, "
+                          "please use `get_last_lr()`.", UserWarning)
+
+        if self.last_epoch == 0:
+            self.last_epoch += 1
+            return [self.lr_start for _ in self.optimizer.param_groups]
+
+        lr = self._compute_lr_from_epoch()
+        self.last_epoch += 1
+
+        return [lr for _ in self.optimizer.param_groups]
+
+    def _get_closed_form_lr(self):
+        return self.base_lrs
+
+    def _compute_lr_from_epoch(self):
+        if self.last_epoch < self.lr_ramp_ep:
+            lr = ((self.lr_max - self.lr_start) /
+                  self.lr_ramp_ep * self.last_epoch +
+                  self.lr_start)
+
+        elif self.last_epoch < self.lr_ramp_ep + self.lr_sus_ep:
+            lr = self.lr_max
+
+        else:
+            lr = ((self.lr_max - self.lr_min) * self.lr_decay **
+                  (self.last_epoch - self.lr_ramp_ep - self.lr_sus_ep) +
+                  self.lr_min)
+        return lr
+
+
+class AverageMeter(object):
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+
+def fetch_scheduler(optimizer):
+    if SCHEDULER == 'ReduceLROnPlateau':
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=patience, verbose=True, eps=eps)
+    elif SCHEDULER == 'CosineAnnealingLR':
+        scheduler = CosineAnnealingLR(optimizer, T_max=T_max, eta_min=min_lr, last_epoch=-1)
+    elif SCHEDULER == 'CosineAnnealingWarmRestarts':
+        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=T_0, T_mult=1, eta_min=min_lr, last_epoch=-1)
+    return scheduler
+
+
+def fetch_loss():
+    loss = nn.CrossEntropyLoss()
+    return loss
+
+
+def train_fn(dataloader, model, criterion, optimizer, device, scheduler, epoch):
+    model.train()
+    loss_score = AverageMeter()
+
+    tk0 = tqdm(enumerate(dataloader), total=len(dataloader))
+    for bi, d in tk0:
+        batch_size = d[0].shape[0]
+
+        images = d[0]
+        targets = d[1]
+
+        images = images.to(device)
+        targets = targets.to(device)
+
+        optimizer.zero_grad()
+
+        output = model(images, targets)
+
+        loss = criterion(output, targets)
+
+        loss.backward()
+        optimizer.step()
+
+        loss_score.update(loss.detach().item(), batch_size)
+        tk0.set_postfix(Train_Loss=loss_score.avg, Epoch=epoch, LR=optimizer.param_groups[0]['lr'])
+
+    if scheduler is not None:
+        scheduler.step()
+
+    return loss_score
 
 
 def edit_title(text):
