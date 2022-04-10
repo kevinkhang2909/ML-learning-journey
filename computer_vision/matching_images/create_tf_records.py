@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 import os
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import tensorflow as tf
 from pathlib import Path
 
 NUM_SHARDS = 16
-IMAGE_SIZE = (600, 600)
+IMAGE_SIZE = (300, 300)
 SEED = 42
 
 
