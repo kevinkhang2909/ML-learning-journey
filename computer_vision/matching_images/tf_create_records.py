@@ -6,7 +6,7 @@ import tensorflow as tf
 from pathlib import Path
 
 NUM_SHARDS = 16
-IMAGE_SIZE = (300, 300)
+IMAGE_SIZE = (512, 512)
 SEED = 42
 
 

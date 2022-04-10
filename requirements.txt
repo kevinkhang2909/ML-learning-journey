@@ -4,3 +4,7 @@ ipython
 matplotlib
 seaborn
 tqdm
+opencv-python
+albumentations
+timm
+efficientnet-pytorch
