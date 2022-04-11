@@ -9,22 +9,19 @@ path_img = path / 'train_images'
 
 def display_df(df, path, cols=6, rows=4):
     for k in range(rows):
-        try:
-            plt.figure(figsize=(20, 5))
-            for j in range(cols):
-                row = cols * k + j
-                name = df['filepath'].tolist()[row]
-                title = df['title'].tolist()[row]
-                title_with_return = edit_title(title)
+        plt.figure(figsize=(20, 5))
+        for j in range(cols):
+            row = cols * k + j
+            name = df['filepath'].tolist()[row]
+            title = df['title'].tolist()[row]
+            title_with_return = edit_title(title)
 
-                img = cv2.imread(str(path / name))
-                plt.subplot(1, cols, j + 1)
-                plt.title(title_with_return)
-                plt.axis('off')
-                plt.imshow(img)
-            plt.show()
-        except IndexError:
-            break
+            img = cv2.imread(str(path / name))
+            plt.subplot(1, cols, j + 1)
+            plt.title(title_with_return)
+            plt.axis('off')
+            plt.imshow(img)
+        plt.show()
 
 
 def edit_title(text):
