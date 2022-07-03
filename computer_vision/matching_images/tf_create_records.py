@@ -62,7 +62,7 @@ def write_tfr(df, filepath, filename, file_index, file_size, image_indexes):
 
 path = Path.home() / 'OneDrive - Seagroup/computer_vison/shopee_item_images/'
 path_img = path / 'train_images'
-df = pd.read_csv(path / 'train.csv')
+df = pd.read_csv(path / 'kaggle_house_price.csv')
 
 match_map = df.groupby(['label_group'])['posting_id'].unique().to_dict()
 df['matches'] = df['label_group'].map(match_map)
