@@ -1,20 +1,11 @@
 from pytorch_lightning import LightningModule
 import torch.nn.functional as F
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from torch import Tensor
 from torch.nn import Linear
 from torch.optim import AdamW, Optimizer, RAdam
 from torch.optim.lr_scheduler import _LRScheduler
-from transformers import get_scheduler, PreTrainedModel
-from datamodules.utils import get_configs
-from transformers import (
-    ConvNextConfig,
-    ConvNextForImageClassification,
-    PreTrainedModel,
-    ViTConfig,
-    ViTForImageClassification,
-)
-import argparse
+from transformers import get_scheduler, PreTrainedModel, ViTConfig, ViTForImageClassification
 
 
 class ImageClassificationNet(LightningModule):
@@ -43,12 +34,12 @@ class ImageClassificationNet(LightningModule):
         return parent_parser
 
     def __init__(
-        self,
-        model: PreTrainedModel,
-        num_train_steps: int,
-        optimizer: str = "AdamW",
-        weight_decay: float = 1e-2,
-        lr: float = 5e-5,
+            self,
+            model: PreTrainedModel,
+            num_train_steps: int,
+            optimizer: str = "AdamW",
+            weight_decay: float = 1e-2,
+            lr: float = 5e-5,
     ):
         """A PyTorch Lightning Module for a HuggingFace model used for image classification.
         Args:
@@ -60,7 +51,7 @@ class ImageClassificationNet(LightningModule):
         """
         super().__init__()
 
-       # Save the hyperparameters and the model
+        # Save the hyperparameters and the model
         self.save_hyperparameters(ignore=["model"])
         self.model = model
 
@@ -125,10 +116,7 @@ def set_clf_head(base: PreTrainedModel, num_classes: int):
         base.classifier = Linear(in_features, num_classes)
 
 
-def model_factory(
-    args: argparse.Namespace,
-    own_config: bool = False,
-) -> PreTrainedModel:
+def model_factory(args: Namespace, own_config: bool = False) -> PreTrainedModel:
     """A factory method for creating a HuggingFace model based on the command line args.
     Args:
         args (Namespace): the argparse Namespace object
@@ -158,3 +146,31 @@ def model_factory(
         base = base_class(config)
 
     return base
+
+
+def get_configs(args: Namespace) -> tuple[dict, dict]:
+    """Get the model and feature extractor configs from the command line args.
+    Args:
+        args (Namespace): the argparse Namespace object
+    Returns:
+         a tuple containing the model and feature extractor configs
+    """
+    if args.dataset == "cat_dog":
+        model_cfg_args = {
+            "image_size": 224,
+            "num_channels": 3,
+            "num_labels": 2,
+        }
+        fe_cfg_args = {
+            "image_mean": [0.5, 0.5, 0.5],
+            "image_std": [0.5, 0.5, 0.5],
+        }
+    else:
+        raise Exception(f"Unknown dataset: {args.dataset}")
+
+    # Set the feature extractor's size attribute to  be the same as the model's image size
+    fe_cfg_args["size"] = model_cfg_args["image_size"]
+    # Set the tensors' return type to PyTorch tensors
+    fe_cfg_args["return_tensors"] = "pt"
+
+    return model_cfg_args, fe_cfg_args

@@ -1,6 +1,6 @@
-from transformations import AddGaussianNoise
+from transformations import AddGaussianNoise, UnNest
 from abc import abstractmethod, ABCMeta
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import (
     DataLoader,
@@ -11,6 +11,8 @@ from torch.utils.data import (
 )
 from torchvision import transforms
 from typing import Optional
+from datasets import load_dataset
+from transformers import ViTFeatureExtractor
 
 
 class ImageDataModule(LightningDataModule, metaclass=ABCMeta):
@@ -152,3 +154,61 @@ class ImageDataModule(LightningDataModule, metaclass=ABCMeta):
             collate_fn=self.collate_fn,
             sampler=self.sequential_sampler(self.test_data),
         )
+
+
+class InputDataModule(ImageDataModule):
+    def prepare_data(self):
+        # No need to download anything for the toy task
+        pass
+
+    def setup(self, stage: Optional[str] = None):
+        dataset_train = load_dataset("imagefolder", data_dir=self.data_dir, split='train')
+        splits = dataset_train.train_test_split(test_size=0.2)
+        dataset_test_valid = splits['test'].train_test_split(test_size=0.5)
+
+        # Set the training and validation data
+        if stage == "fit" or stage is None:
+            self.train_data, self.val_data = splits['train'], dataset_test_valid['train']
+
+        # Set the test data
+        if stage == "test" or stage is None:
+            self.test_data = dataset_test_valid['test']
+
+
+def datamodule_factory(args: Namespace) -> ImageDataModule:
+    """A factory method for creating a datamodule based on the command line args.
+    Args:
+        args (Namespace): the argparse Namespace object
+    Returns:
+        an ImageDataModule instance
+    """
+
+    # Set the feature extractor class based on the provided base model name
+    if args.base_model == "ViT":
+        fe_class = ViTFeatureExtractor
+    else:
+        raise Exception(f"Unknown base model: {args.base_model}")
+
+    # Create the feature extractor instance
+    feature_extractor = fe_class.from_pretrained(args.from_pretrained)
+
+    # Un-nest the feature extractor's output
+    feature_extractor = UnNest(feature_extractor)
+
+    # Define the datamodule's configuration
+    dm_cfg = {
+        "feature_extractor": feature_extractor,
+        "batch_size": args.batch_size,
+        "add_noise": args.add_noise,
+        "add_rotation": args.add_rotation,
+        "add_blur": args.add_blur,
+        "num_workers": args.num_workers,
+    }
+
+    # Determine the dataset class based on the provided dataset name
+    if args.dataset == 'cat-dog':
+        dm_class = datamodule_factory
+    else:
+        raise Exception(f"Unknown dataset: {args.dataset}")
+
+    return dm_class(**dm_cfg)
