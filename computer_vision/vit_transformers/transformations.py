@@ -1,4 +1,4 @@
-from torch import Tensor, randn, tensor
+from torch import Tensor, tensor, randn
 from transformers.image_utils import ImageInput
 
 
@@ -36,4 +36,3 @@ class UnNest:
 
         # HuggingFace models expect 3D tensors [C, H, W]
         return x if len(x) == 3 else x.unsqueeze(0)
-
