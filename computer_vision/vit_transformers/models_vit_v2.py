@@ -134,7 +134,10 @@ def model_factory(args: Namespace, own_config: bool = False) -> PreTrainedModel:
         raise Exception(f"Unknown base model: {args.base_model}")
 
     # Get the model config
-    model_cfg_args, _ = get_configs(args)
+    model_cfg_args = {
+        "num_channels": 3,
+        "num_labels": 2,
+    }
     if not own_config and args.from_pretrained:
         # Create a model from a pretrained model
         base = base_class.from_pretrained(args.from_pretrained)
@@ -146,31 +149,3 @@ def model_factory(args: Namespace, own_config: bool = False) -> PreTrainedModel:
         base = base_class(config)
 
     return base
-
-
-def get_configs(args: Namespace) -> tuple[dict, dict]:
-    """Get the model and feature extractor configs from the command line args.
-    Args:
-        args (Namespace): the argparse Namespace object
-    Returns:
-         a tuple containing the model and feature extractor configs
-    """
-    if args.dataset == "cat_dog":
-        model_cfg_args = {
-            "image_size": 224,
-            "num_channels": 3,
-            "num_labels": 2,
-        }
-        fe_cfg_args = {
-            "image_mean": [0.5, 0.5, 0.5],
-            "image_std": [0.5, 0.5, 0.5],
-        }
-    else:
-        raise Exception(f"Unknown dataset: {args.dataset}")
-
-    # Set the feature extractor's size attribute to  be the same as the model's image size
-    fe_cfg_args["size"] = model_cfg_args["image_size"]
-    # Set the tensors' return type to PyTorch tensors
-    fe_cfg_args["return_tensors"] = "pt"
-
-    return model_cfg_args, fe_cfg_args

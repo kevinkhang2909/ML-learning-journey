@@ -3,10 +3,8 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
-from datamodules import ImageDataModule
-from models_vit_v2 import model_factory
-# from datamodules.utils import datamodule_factory
-from models_vit_v2 import ImageClassificationNet
+from datamodules import ImageDataModule, datamodule_factory
+from models_vit_v2 import model_factory, ImageClassificationNet
 
 
 parser = argparse.ArgumentParser()
@@ -48,8 +46,14 @@ parser.add_argument(
 parser.add_argument(
     "--from_pretrained",
     type=str,
-    # default="tanlq/vit-base-patch16-224-in21k-finetuned-cifar10",
+    default="google/vit-base-patch16-224-in21k",
     help="The name of the pretrained HF model to fine-tune from.",
+)
+parser.add_argument(
+    "--dataset",
+    type=str,
+    default="cat-dog",
+    help="The dataset to use.",
 )
 
 # Datamodule
@@ -63,7 +67,7 @@ pl.seed_everything(42)
 base = model_factory(args)
 
 # Load datamodule
-dm = ImageDataModule()
+dm = datamodule_factory(args)
 dm.prepare_data()
 dm.setup("fit")
 

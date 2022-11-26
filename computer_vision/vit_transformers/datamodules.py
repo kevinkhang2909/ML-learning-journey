@@ -206,6 +206,7 @@ def datamodule_factory(args: Namespace) -> ImageDataModule:
     }
 
     # Determine the dataset class based on the provided dataset name
+    print(args)
     if args.dataset == 'cat-dog':
         dm_class = datamodule_factory
     else:
