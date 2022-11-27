@@ -1,12 +1,14 @@
+import torch
+from torch import Tensor
+
+import cv2
+import numpy as np
+from PIL import Image
+from typing import List, Callable, Optional
+
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
-from PIL import Image
-import numpy as np
-import cv2
-import torch
-from typing import List, Callable, Optional
 from pytorch_lightning import LightningModule
-from torch import Tensor
 
 
 class HuggingfaceWrapper(LightningModule):
@@ -30,25 +32,23 @@ def run_grad_cam_on_image(model: torch.nn.Module,
     If several targets are passed in targets_for_gradcam,
     a visualization for each of them will be created.
     """
+    # Method
+    cam = method(model=HuggingfaceWrapper(model),
+                 target_layers=[target_layer],
+                 reshape_transform=reshape_transform)
 
-    with method(model=HuggingfaceWrapper(model),
-                target_layers=[target_layer],
-                reshape_transform=reshape_transform) as cam:
-        # Replicate the tensor for each of the categories we want to create Grad-CAM for:
-        repeated_tensor = input_tensor[None, :].repeat(len(targets_for_gradcam), 1, 1, 1)
+    # Replicate the tensor for each of the categories we want to create Grad-CAM for:
+    repeated_tensor = input_tensor[None, :].repeat(len(targets_for_gradcam), 1, 1, 1)
+    batch_results = cam(input_tensor=repeated_tensor, targets=targets_for_gradcam)
 
-        batch_results = cam(input_tensor=repeated_tensor,
-                            targets=targets_for_gradcam)
-        results = []
-        for grayscale_cam in batch_results:
-            visualization = show_cam_on_image(np.float32(input_image) / 255,
-                                              grayscale_cam,
-                                              use_rgb=True)
-            # Make it weight less in the notebook:
-            visualization = cv2.resize(visualization,
-                                       (visualization.shape[1] // 2, visualization.shape[0] // 2))
-            results.append(visualization)
-        return np.hstack(results)
+    # Results
+    results = []
+    for grayscale_cam in batch_results:
+        visualization = show_cam_on_image(np.float32(input_image) / 255, grayscale_cam, use_rgb=True)
+        # Make it weight less in the notebook:
+        visualization = cv2.resize(visualization, (visualization.shape[1] // 2, visualization.shape[0] // 2))
+        results.append(visualization)
+    return np.hstack(results)
 
 
 def print_top_categories(model, img_tensor, top_k=5):
