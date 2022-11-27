@@ -1,6 +1,5 @@
 from pytorch_lightning import LightningDataModule
 from torchvision import transforms
-from typing import Optional
 from datasets import load_dataset
 from transformers import ViTFeatureExtractor
 
@@ -27,9 +26,11 @@ def transform_img(feature_extractor, mode='train'):
 
 
 class ImageDataModule(LightningDataModule):
-    def __init__(self, model_name, data_dir: str = "data/"):
+    def __init__(self, model_name, data_dir: str = "data/", batch_size: int = 32, num_workers: int = 4):
         super().__init__()
         self.data_dir = data_dir
+        self.batch_size = batch_size,
+        self.num_workers = num_workers,
         self.feature_extractor = ViTFeatureExtractor.from_pretrained(model_name)
 
     def transforms_process_train(self, examples):
