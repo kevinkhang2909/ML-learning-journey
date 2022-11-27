@@ -9,7 +9,7 @@ from pytorch_lightning import LightningModule
 from torch import Tensor
 
 
-class HuggingfaceToTensorModelWrapper(LightningModule):
+class HuggingfaceWrapper(LightningModule):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -18,31 +18,37 @@ class HuggingfaceToTensorModelWrapper(LightningModule):
         return self.model(x).logits
 
 
-# def run_grad_cam_on_image(model: torch.nn.Module,
-#                           target_layer: torch.nn.Module,
-#                           targets_for_gradcam: List[Callable],
-#                           reshape_transform: Optional[Callable],
-#                           input_tensor: torch.nn.Module = img_tensor,
-#                           input_image: Image = image,
-#                           method: Callable = GradCAM):
-#     with method(model=HuggingfaceToTensorModelWrapper(model),
-#                 target_layers=[target_layer],
-#                 reshape_transform=reshape_transform) as cam:
-#         # Replicate the tensor for each of the categories we want to create Grad-CAM for:
-#         repeated_tensor = input_tensor[None, :].repeat(len(targets_for_gradcam), 1, 1, 1)
-#
-#         batch_results = cam(input_tensor=repeated_tensor,
-#                             targets=targets_for_gradcam)
-#         results = []
-#         for grayscale_cam in batch_results:
-#             visualization = show_cam_on_image(np.float32(input_image) / 255,
-#                                               grayscale_cam,
-#                                               use_rgb=True)
-#             # Make it weight less in the notebook:
-#             visualization = cv2.resize(visualization,
-#                                        (visualization.shape[1] // 2, visualization.shape[0] // 2))
-#             results.append(visualization)
-#         return np.hstack(results)
+def run_grad_cam_on_image(model: torch.nn.Module,
+                          target_layer: torch.nn.Module,
+                          targets_for_gradcam: List[Callable],
+                          reshape_transform: Optional[Callable],
+                          input_image: Image,
+                          input_tensor: torch.nn.Module,
+                          method: Callable = GradCAM):
+    """
+    Helper function to run GradCAM on an image and create a visualization.
+    If several targets are passed in targets_for_gradcam,
+    a visualization for each of them will be created.
+    """
+
+    with method(model=HuggingfaceWrapper(model),
+                target_layers=[target_layer],
+                reshape_transform=reshape_transform) as cam:
+        # Replicate the tensor for each of the categories we want to create Grad-CAM for:
+        repeated_tensor = input_tensor[None, :].repeat(len(targets_for_gradcam), 1, 1, 1)
+
+        batch_results = cam(input_tensor=repeated_tensor,
+                            targets=targets_for_gradcam)
+        results = []
+        for grayscale_cam in batch_results:
+            visualization = show_cam_on_image(np.float32(input_image) / 255,
+                                              grayscale_cam,
+                                              use_rgb=True)
+            # Make it weight less in the notebook:
+            visualization = cv2.resize(visualization,
+                                       (visualization.shape[1] // 2, visualization.shape[0] // 2))
+            results.append(visualization)
+        return np.hstack(results)
 
 
 def print_top_categories(model, img_tensor, top_k=5):
