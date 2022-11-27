@@ -6,14 +6,16 @@ import numpy as np
 import cv2
 import torch
 from typing import List, Callable, Optional
+from pytorch_lightning import LightningModule
+from torch import Tensor
 
 
-class HuggingfaceToTensorModelWrapper(torch.nn.Module):
+class HuggingfaceToTensorModelWrapper(LightningModule):
     def __init__(self, model):
-        super(HuggingfaceToTensorModelWrapper, self).__init__()
+        super().__init__()
         self.model = model
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.model(x).logits
 
 
@@ -57,8 +59,17 @@ def print_top_categories(model, img_tensor, top_k=5):
 
 
 def reshape_transform_vit_huggingface(x):
+    """
+    Reshaping to features with the format: batch x features x height x width
+    Transformers will sometimes have an internal shape that looks like this:
+    (batch=10 x (tokens=145) x (features=384).
+    The 145 tokens mean 1 CLS token + 144 spatial tokens.
+    These 144 spatial tokens actually represent a 12x12 2D image.
+    """
+    # Remove the CLS token
     activations = x[:, 1:, :]
-    activations = activations.view(activations.shape[0],
-                                   12, 12, activations.shape[2])
+    # Reshape to a 12 x 12 spatial image:
+    activations = activations.view(activations.shape[0], 12, 12, activations.shape[2])
+    # Transpose the features to be in the second coordinate:
     activations = activations.transpose(2, 3).transpose(1, 2)
     return activations
