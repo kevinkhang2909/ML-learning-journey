@@ -68,7 +68,7 @@ def reshape_vit_huggingface(x):
     """
     # Remove the CLS token
     activations = x[:, 1:, :]
-    image_2d_shape = np.sqrt(x.shape[1])
+    image_2d_shape = int(np.sqrt(activations.shape[1]))
     # Reshape to a 12 x 12 spatial image:
     activations = activations.view(activations.shape[0], image_2d_shape, image_2d_shape, activations.shape[2])
     # Transpose the features to be in the second coordinate:
