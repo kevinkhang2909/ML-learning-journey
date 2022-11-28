@@ -74,16 +74,3 @@ def reshape_vit_huggingface(x):
     # Transpose the features to be in the second coordinate:
     activations = activations.transpose(2, 3).transpose(1, 2)
     return activations
-
-
-def reshape_dynamic():
-    def segformer_reshape_transform_huggingface(tensor, width, height):
-        result = tensor.reshape(tensor.size(0),
-                                height,
-                                width,
-                                tensor.size(2))
-        result = result.transpose(2, 3).transpose(1, 2)
-        return result
-
-    return partial(segformer_reshape_transform_huggingface,
-                   width=img_tensor.shape[2]//32, height=img_tensor.shape[1]//32)
