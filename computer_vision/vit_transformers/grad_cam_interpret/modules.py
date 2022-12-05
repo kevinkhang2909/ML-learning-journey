@@ -51,13 +51,6 @@ def run_grad_cam_on_image(model: torch.nn.Module,
     return np.hstack(results)
 
 
-def print_top_categories(model, img_tensor, top_k=5):
-    logits = model(img_tensor.unsqueeze(0)).logits
-    indices = logits.cpu()[0, :].detach().numpy().argsort()[-top_k:][::-1]
-    for i in indices:
-        print(f"Predicted class {i}: {model.config.id2label[i]}")
-
-
 def reshape_vit_huggingface(x):
     """
     Reshaping to features with the format: batch x features x height x width
