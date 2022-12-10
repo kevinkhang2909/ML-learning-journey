@@ -51,13 +51,6 @@ def run_grad_cam_on_image(model: torch.nn.Module,
     return np.hstack(results)
 
 
-def print_top_categories(model, img_tensor, top_k=5):
-    logits = model(img_tensor.unsqueeze(0)).logits
-    indices = logits.cpu()[0, :].detach().numpy().argsort()[-top_k:][::-1]
-    for i in indices:
-        print(f"Predicted class {i}: {model.config.id2label[i]}")
-
-
 def reshape_vit_huggingface(x):
     """
     Reshaping to features with the format: batch x features x height x width
@@ -68,8 +61,9 @@ def reshape_vit_huggingface(x):
     """
     # Remove the CLS token
     activations = x[:, 1:, :]
+    image_2d_shape = int(np.sqrt(activations.shape[1]))
     # Reshape to a 12 x 12 spatial image:
-    activations = activations.view(activations.shape[0], 12, 12, activations.shape[2])
+    activations = activations.view(activations.shape[0], image_2d_shape, image_2d_shape, activations.shape[2])
     # Transpose the features to be in the second coordinate:
     activations = activations.transpose(2, 3).transpose(1, 2)
     return activations
