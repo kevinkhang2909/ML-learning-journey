@@ -34,7 +34,6 @@ class NN(nn.Module):
         Returns:
             out: the output of the network
         """
-
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x

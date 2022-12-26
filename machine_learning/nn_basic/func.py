@@ -89,6 +89,7 @@ def train_batch(train_loader, num_epochs, device, model, optimizer, scheduler):
 
         return model
 
+
 def report(train_loader, test_loader, model, device):
     print(f'Accuracy on training set: {check_accuracy(train_loader, model, device) * 100:.2f}')
     print(f'Accuracy on test set: {check_accuracy(test_loader, model, device) * 100:.2f}')
