@@ -5,12 +5,12 @@ I try to make the code as concise as possible, and the goal is be to used as a l
 ## Machine learning (ML)
 - Forecasting
 
-
 ## Computer Vision (CV)
 - Vision Transformer: Dog & Cat Classification
 - Grad-CAM interpretability
 
 ## Natural language processing (NLP)
 - Text Matching
+
 ## Analytics Pipeline & Statistic Inference
-- Linear Regression
+- Factors Analysis on House Price (Linear Regression) - [Medium Post](https://medium.com/@kevinkhang2909/linear-regression-research-pipeline-house-pricing-part-1-eda63757797)
