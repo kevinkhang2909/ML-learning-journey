@@ -4,8 +4,8 @@ spent analysing the data itself.
 
 This post focuses in on "fuzzy" matching and how this can help to automate significant challenges in 
 a large number of data science workflows through:
-- Deduplication: Finding similar categories or entities in a data set 
-(for example, we may need to combine ‘D J Trump’, ‘D. Trump’ and ‘Donald Trump’ into the same entity).
+- Deduplication: Finding similar names in a data set 
+(Ex: we need to combine ‘D J Trump’, ‘D. Trump’ and ‘Donald Trump’ into the same entity).
 
 For the human reader it is obvious that both **D J Trump** and **Donald Trump** are the same name. However for 
 a computer these are completely different making spotting these nearly identical strings difficult.
@@ -19,6 +19,7 @@ Some examples about product name:
 - Shopee vs. Shopeeee vs. Shoppee
 ```
 ---
+
 # 1.The Algorithm
 ## 1.1 TF-IDF
 It is a simple algorithm which splits text into "chunks" (ngrams), counts the occurrence 
@@ -51,12 +52,23 @@ There are several formats to store a sparse matrix, such as Dictionary of Key (D
 List of lists (LIL), Coordinate list (COO), Compressed sparse row (CSR) and 
 Compressed sparse column (CSC). Because CSR allows fast access and matrix multiplication, it is used in 
 SciPy Sparse matrix dot function:
+
 ![figure 1](fig1-csr-illustration.png)
 
 # 2. Experiment with dataset
+I just grabbed a random dataset with lots of company names from [Kaggle](https://www.kaggle.com/datasets/dattapiy/sec-edgar-companies-list).
+Let's run the experiment. 
+
+Using wrapper is also as simple as few lines of code, you can refer the code in [the link](https://github.com/kevinkhang2909/ML-learning-journey/blob/main/nlp/string_matching/string_matching.ipynb).
+```python
+item = df['company_edit_name'].unique().tolist()
+match_df = TextMatch(item, item).run_match()
+match_df
+```
 The matches look pretty similar! The cosine similarity gives a good indication of the similarity among item names.
+
 ![figure 2](fig2-data-sample.png)
 
-References:
-1. https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/
+# References:
+1. Boosting Selection Of Most Similar Entities In Large Scale Datasets. https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/
 2. https://github.com/ing-bank/sparse_dot_topn
