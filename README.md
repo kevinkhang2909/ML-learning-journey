@@ -1,6 +1,7 @@
 # Machine learning journey
-In this repository you will find tutorials and projects related to Machine Learning. 
-I try to make the code as concise as possible, and the goal is be to used as a learning resource and a way to lookup problems to solve specific problems.
+"What I cannot create, I do not understand", as Feynman said. So I build this repository. You will find tutorials 
+and projects related to Machine Learning. I try to make the code as concise as possible, and the goal is be to 
+used as a learning resource and a way to lookup problems to solve specific problems.
 
 ## Computer Vision (CV)
 - Vision Transformer: Dog & Cat Classification
