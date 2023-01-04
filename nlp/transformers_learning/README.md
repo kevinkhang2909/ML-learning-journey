@@ -71,9 +71,48 @@ explain.visualize()
 ```
 Visualizing salient tokens computed by integrated gradients that contribute to the predicted class using a binary classification model.
 
-![figure 2](media/fig3_results.png)
+![figure 3](media/fig3_results.png)
 
 From the results above we can see which tokens model is focusing.
+
+With common sense, we can understand some words such as 'chán', 'không giao được hàng' may containt negative feedbacks which the model can detect.
+
+## 2.3 LayerConductance - Hidden Layers
+Furthermore, we can explore a little bit about the distribution of attribution scores for each token across all layers 
+in PhoBERT model by Layer Conductance.
+
+PhoBERT has total 12 hidden layers. Let's iterate over all layers and compute the attributions for all tokens.
+- Word_embeddings is a matrix of shape (64001, 768) where the first dimension is the vocabulary dimension, 
+while the second is embedding dimension, i.e. the number of features with which we represent a word. For base-bert 
+it's 768 and it increases for bigger models. In general the higher the embedding dimension the better we can represent 
+certain words-this is true to a degree, at some point increasing the dimension will not increase the accuracy of the 
+model by much while computational complexity does.
+
+- Position_embeddings is a matrix of shape (256, 768) where the former represents the max sentence length whilst the 
+latter is the features dimension as for word embeddings-so depending on the position of each token we retrieve 
+the associated vector.
+
+- Token_type_embeddings is "redundant" here and comes from the Bert training task where the semantic similarity between 
+two sentences is assessed-this embedding is needed to distinguish between the first and the second sentence. We do 
+not need it as we have only one input sentence for classification task.]
+
+```python
+print(model.roberta.config.num_hidden_layers)
+# output: 12
+```
+
+```python
+def forward_func2(inputs):
+    return model(inputs_embeds=inputs)[0].max(1).values
+
+lc = LayerConductance(forward_func2, model.roberta.encoder.layer[i])
+lc_vals = lc.attribute(input_embeddings)
+```
+
+![figure 4](media/fig4_hidden_layers.png)
+
+The plot above represents a heat map of attributions across all layers and tokens. Some unknown-token gains 
+increasingly high attribution on layer 6. However, in the rest layers that importance is diminishing.
 
 # References:
 [1] Captum: A unified and generic model interpretability library for PyTorch. [https://arxiv.org/pdf/2009.07896.pdf](https://arxiv.org/pdf/2009.07896.pdf) (accessed Jan 03, 2023)
