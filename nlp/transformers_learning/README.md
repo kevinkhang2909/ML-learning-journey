@@ -44,6 +44,8 @@ There are two different ways of computing the attributions for embedding layers.
 2. Use LayerIntegratedGradients for each word_embeddings and compute the attributions each embedding.
 
 Attribution score definition:
+The attribution scores indicate how much a self-attention edge attributes to the final model decision. [2]
+
 ```python
 def custom_forward(self, inputs):
     return torch.sigmoid(self.model(inputs)[0])[0]  # binary
@@ -117,4 +119,6 @@ increasingly high attribution on layer 6. However, in the rest layers that impor
 # References:
 [1] Captum: A unified and generic model interpretability library for PyTorch. [https://arxiv.org/pdf/2009.07896.pdf](https://arxiv.org/pdf/2009.07896.pdf) (accessed Jan 03, 2023)
 
-[2] Captum Official. captum.ai. [https://captum.ai/tutorials/](https://captum.ai/tutorials/) (accessed Jan 03, 2023)
+[2] Self-Attention Attribution: Interpreting Information Interactions Inside Transformers. [https://arxiv.org/pdf/2004.11207.pdf](https://arxiv.org/pdf/2004.11207.pdf) (accessed Jan 03, 2023)
+
+[3] Captum Official. captum.ai. [https://captum.ai/tutorials/](https://captum.ai/tutorials/) (accessed Jan 03, 2023)
