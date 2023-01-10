@@ -59,4 +59,4 @@ look for support levels below 5% to obtain a greater number of rules with a reas
 
 # References:
 1. [Association Rules Mining/Market Basket Analysis](https://www.kaggle.com/code/datatheque/association-rules-mining-market-basket-analysis)
-2. [Captum · Model Interpretability for PyTorch](https://captum.ai/tutorials/)
+2. [Ludwig-Maximilians-Universität München Institut für Informatik Lehrstuhl für Datenbanksysteme und Data Mining Oettingenstraße 67 80538 München, Germany](https://www.dbs.ifi.lmu.de/Lehre/KDD/SS16/skript/3_FrequentItemsetMining.pdf)

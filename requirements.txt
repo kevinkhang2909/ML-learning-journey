@@ -9,8 +9,5 @@ transformers
 datasets
 evaluate
 scikit-learn
-pillow
-torch
-torchvision
 statsmodels
 underthesea
