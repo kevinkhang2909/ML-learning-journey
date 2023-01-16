@@ -43,19 +43,30 @@ together simply at random).
 ### 3.1 Data
 The Instacart Online Grocery Shopping Dataset from [Kaggle](https://www.kaggle.com/competitions/instacart-market-basket-analysis/data).
 
+![figure 2](media/fig2_data.png)
+
+Some EDA to see top selling products:
+
+![figure 3](media/fig3_top_products.png)
+
 ### 3.2 Metric Threshold
 The first step in order to create a set of association rules is to determine the optimal thresholds for 
 support and confidence. If we set these values too low, then the algorithm will take longer to execute and we 
 will get a lot of rules (most of them will not be useful). Then, what values do we choose? We can try 
 different values of support and confidence and see graphically how many rules are generated for each combination.
 
-- Support level of 10%. We only identify a few rules with very low confidence levels. This means that there 
-are no relatively frequent associations in our data set. We can’t choose this value, the resulting 
-rules are unrepresentative.
-- Support level of 5%. We only identify a rule with a confidence of at least 50%. It seems that we have to 
-look for support levels below 5% to obtain a greater number of rules with a reasonable confidence.
-- Support level of 1%. We started to get dozens of rules, of which 13 have a confidence of at least 50%.
-- Support level of 0.5%. Too many rules to analyze!
+![figure 4](media/fig4_threshold.png)
+
+- Support level of 0.018%. We started to get thousands of rules, of which have a confidence of at least 50%.
+- Support level of 0.01%. Too many rules to analyze!
+
+List of rules generated:
+
+![figure 5](media/fig5_rules.png)
+
+The correlation between confidence and lift:
+
+![figure 6](media/fig6_correlation.png)
 
 # References:
 1. [Association Rules Mining/Market Basket Analysis](https://www.kaggle.com/code/datatheque/association-rules-mining-market-basket-analysis)
