@@ -68,6 +68,10 @@ The correlation between confidence and lift:
 
 ![figure 6](media/fig6_correlation.png)
 
+Rules network:
+
+![figure 7](media/fig7_network.png)
+
 # References:
-1. [Association Rules Mining/Market Basket Analysis](https://www.kaggle.com/code/datatheque/association-rules-mining-market-basket-analysis)
-2. [Ludwig-Maximilians-Universität München Institut für Informatik Lehrstuhl für Datenbanksysteme und Data Mining Oettingenstraße 67 80538 München, Germany](https://www.dbs.ifi.lmu.de/Lehre/KDD/SS16/skript/3_FrequentItemsetMining.pdf)
+1. Market Basket Analysis, [Kaggle](https://www.kaggle.com/code/datatheque/association-rules-mining-market-basket-analysis)
+2. Datenbanksysteme und Data Mining, Ludwig-Maximilians-Universität München, [Slide](https://www.dbs.ifi.lmu.de/Lehre/KDD/SS16/skript/3_FrequentItemsetMining.pdf)
