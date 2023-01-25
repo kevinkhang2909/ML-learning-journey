@@ -5,7 +5,7 @@ spent analysing the data itself.
 This post focuses in on "fuzzy" matching and how this can help to automate significant challenges in 
 a large number of data science workflows through:
 - Deduplication: Finding similar names in a data set 
-(Ex: we need to combine ‘D J Trump’, ‘D. Trump’ and ‘Donald Trump’ into the same entity).
+(Ex: we need to combine **D J Trump**, **D. Trump** and **Donald Trump** into the same entity).
 
 For the human reader it is obvious that both **D J Trump** and **Donald Trump** are the same name. However for 
 a computer these are completely different making spotting these nearly identical strings difficult.
@@ -53,7 +53,7 @@ List of lists (LIL), Coordinate list (COO), Compressed sparse row (CSR) and
 Compressed sparse column (CSC). Because CSR allows fast access and matrix multiplication, it is used in 
 SciPy Sparse matrix dot function:
 
-![figure 1](fig1-csr-illustration.png)
+![figure 1](media/fig1-csr-illustration.png)
 
 # 2. Experiment with dataset
 I just grabbed a random dataset with lots of company names from [Kaggle](https://www.kaggle.com/datasets/dattapiy/sec-edgar-companies-list).
@@ -67,8 +67,8 @@ match_df
 ```
 The matches look pretty similar! The cosine similarity gives a good indication of the similarity among item names.
 
-![figure 2](fig2-data-sample.png)
+![figure 2](media/fig2-data-sample.png)
 
 # References:
-1. Boosting Selection Of Most Similar Entities In Large Scale Datasets. https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/
-2. https://github.com/ing-bank/sparse_dot_topn
+1. Boosting Selection Of Most Similar Entities In Large Scale Datasets, Sun Analytics [www.sun-analytics.nl](https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/)
+2. Sparse_dot_topn, ing-bank [https://github.com/ing-bank](https://github.com/ing-bank/sparse_dot_topn)
