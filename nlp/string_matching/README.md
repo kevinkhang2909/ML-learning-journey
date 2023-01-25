@@ -70,5 +70,5 @@ The matches look pretty similar! The cosine similarity gives a good indication o
 ![figure 2](media/fig2-data-sample.png)
 
 # References:
-1. Boosting Selection Of Most Similar Entities In Large Scale Datasets, Sun Analytics [www.sun-analytics.nl](https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/)
-2. Sparse_dot_topn, ing-bank [https://github.com/ing-bank](https://github.com/ing-bank/sparse_dot_topn)
+1. Boosting Selection Of Most Similar Entities In Large Scale Datasets. Sun Analytics. [www.sun-analytics.nl](https://www.sun-analytics.nl/posts/2017-07-26-boosting-selection-of-most-similar-entities-in-large-scale-datasets/)
+2. Sparse_dot_topn. Ing Bank. [https://github.com/ing-bank](https://github.com/ing-bank/sparse_dot_topn)
