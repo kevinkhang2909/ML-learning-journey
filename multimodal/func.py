@@ -122,14 +122,8 @@ class CLIPDualEncoderModel(LightningModule):
         parameters = [
             {"params": self.image_encoder.parameters(), "lr": self.image_encoder_lr},
             {"params": self.text_encoder.parameters(), "lr": self.text_encoder_lr},
-            {
-                "params": itertools.chain(
-                    self.image_projection.parameters(),
-                    self.text_projection.parameters(),
-                ),
-                "lr": self.head_lr,
-                "weight_decay": self.weight_decay,
-            },
+            {"params": itertools.chain(self.image_projection.parameters(), self.text_projection.parameters()),
+             "lr": self.head_lr, "weight_decay": self.weight_decay},
         ]
         optimizer = optim.Adam(parameters, weight_decay=self.weight_decay)
         lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -141,21 +135,21 @@ class CLIPDualEncoderModel(LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": lr_scheduler,
-            "monitor": "val/loss",
+            "monitor": "val_loss",
         }
 
     def training_step(self, batch, *args, **kwargs):
         image_embeddings, text_embeddings = self.forward(batch)
         loss = self._compute_losses(image_embeddings, text_embeddings).mean()
         train_loss = self.all_gather(loss)
-        self.log("train/loss", train_loss.mean(), on_epoch=True, prog_bar=True, batch_size=self.batch_size)
+        self.log("train_loss", train_loss.mean(), on_epoch=True, prog_bar=True, batch_size=self.batch_size)
         return loss
 
     def validation_step(self, batch, *args, **kwargs):
         image_embeddings, text_embeddings = self.forward(batch)
         loss = self._compute_losses(image_embeddings, text_embeddings).mean()
         val_loss = self.all_gather(loss)
-        self.log("val/loss", val_loss.mean(), on_epoch=True, prog_bar=True, batch_size=self.batch_size)
+        self.log("val_loss", val_loss.mean(), on_epoch=True, prog_bar=True, batch_size=self.batch_size)
         return loss
 
 
