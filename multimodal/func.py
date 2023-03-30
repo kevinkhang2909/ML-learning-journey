@@ -162,7 +162,7 @@ def get_transform():
     return trf
 
 
-class Flickr8kDataset(Dataset):
+class FlickrDataset(Dataset):
     def __init__(self, image_filenames, captions, tokenizer):
         self.image_filenames = image_filenames
         self.captions = captions
