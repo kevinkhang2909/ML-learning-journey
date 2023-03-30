@@ -68,7 +68,7 @@ class CLIPDualEncoderModel(LightningModule):
                  head_lr: float = 1e-3,
                  image_encoder_lr: float = 1e-4,
                  text_encoder_lr: float = 1e-5,
-                 lr_scheduler_patience: float = 1.0,
+                 lr_scheduler_patience: int = 1,
                  lr_scheduler_factor: float = 0.8,
                  batch_size: int = 64,
                  *args,
@@ -157,7 +157,7 @@ def get_transform():
     trf = A.Compose([
         A.Resize(224, 224, always_apply=True),
         A.Normalize(max_pixel_value=255.0, always_apply=True)
-    ]
+        ]
     )
     return trf
 
