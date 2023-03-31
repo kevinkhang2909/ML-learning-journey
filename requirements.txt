@@ -4,10 +4,7 @@ ipython
 matplotlib
 seaborn
 tqdm
-opencv-python
 transformers
-datasets
-evaluate
 scikit-learn
 statsmodels
 underthesea

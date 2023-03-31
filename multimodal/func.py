@@ -10,8 +10,10 @@ from lightning import LightningModule
 
 
 class Config:
-    pretrain_image = 'microsoft/resnet-50'
-    pretrain_text = 'distilbert-base-uncased'
+    # pretrain_image = 'microsoft/resnet-50'
+    pretrain_image = 'google/vit-base-patch16-224-in21k'
+    # pretrain_text = 'distilbert-base-uncased'
+    pretrain_text = 'sentence-transformers/all-MiniLM-L6-v2'
     device = 'cuda'
 
 
@@ -60,17 +62,18 @@ class CLIPDualEncoderModel(LightningModule):
                  image_pretrained: str,
                  text_pretrained: str,
                  image_embedding_dims: int = 2048,
-                 text_embedding_dims: int = 768,
+                 text_embedding_dims: int = 384,
                  projection_dims: int = 256,
                  dropout: float = 0.0,
                  temperature: float = 1.0,
-                 weight_decay: float = 0.0,
-                 head_lr: float = 1e-3,
-                 image_encoder_lr: float = 1e-4,
-                 text_encoder_lr: float = 1e-5,
+                 weight_decay: float = 0.1,
+                 head_lr: float = 1e-2,
+                 image_encoder_lr: float = 1e-2,
+                 text_encoder_lr: float = 1e-2,
                  lr_scheduler_patience: int = 1,
                  lr_scheduler_factor: float = 0.8,
                  batch_size: int = 64,
+                 max_epochs: int = 3,
                  *args,
                  **kwargs,
                  ) -> None:
@@ -96,6 +99,7 @@ class CLIPDualEncoderModel(LightningModule):
         self.lr_scheduler_patience = lr_scheduler_patience
         self.lr_scheduler_factor = lr_scheduler_factor
         self.batch_size = batch_size
+        self.max_epochs = max_epochs
         self.save_hyperparameters()
 
     def _compute_losses(self, image_embeddings, text_embeddings):
@@ -126,12 +130,13 @@ class CLIPDualEncoderModel(LightningModule):
              "lr": self.head_lr, "weight_decay": self.weight_decay},
         ]
         optimizer = optim.Adam(parameters, weight_decay=self.weight_decay)
-        lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            patience=self.lr_scheduler_patience,
-            factor=self.lr_scheduler_factor,
-        )
+        lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, self.max_epochs, eta_min=1e-6)
+        # lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        #     optimizer,
+        #     mode="min",
+        #     patience=self.lr_scheduler_patience,
+        #     factor=self.lr_scheduler_factor,
+        # )
         return {
             "optimizer": optimizer,
             "lr_scheduler": lr_scheduler,
@@ -166,7 +171,7 @@ class FlickrDataset(Dataset):
     def __init__(self, image_filenames, captions, tokenizer):
         self.image_filenames = image_filenames
         self.captions = captions
-        self.encoded_captions = tokenizer(captions, padding=True, truncation=True, max_length=200)
+        self.encoded_captions = tokenizer(captions, padding=True, truncation=True, max_length=32)
         self.transforms = get_transform()
 
     def __getitem__(self, idx):
