@@ -1,5 +1,3 @@
-import numpy as np
-
 from torch.utils.data import Dataset
 from torchvision import transforms, io
 import torch
@@ -9,13 +7,14 @@ from torch.optim import AdamW
 from lightning import LightningModule
 
 
-# IMAGE_SIZE = 256
-PATCH_SIZE = 16
-ZERO_PCT = 0.1
-NUM_PATCHES = (256 // PATCH_SIZE) ** 2
-RGB_CHANNELS = 3
-TOPK = 5
-VALID_IMAGES = 5
+class Config:
+    image_size = 256
+    patch_size = 16
+    num_patches = (256 // 16) ** 2
+    rgb_channel = 3
+    batch_size = 32
+    num_workers = 4
+    num_pixels = 256 * 3  # image_size * rgb channel
 
 
 class ImageData(Dataset):
@@ -40,19 +39,13 @@ class ImageData(Dataset):
 
 class CollateFn:
     def reshape(self, batch):
-        patches = torch.stack(batch).unfold(2, PATCH_SIZE, PATCH_SIZE).unfold(3, PATCH_SIZE, PATCH_SIZE)
+        patches = torch.stack(batch).unfold(2, Config.patch_size, Config.patch_size).unfold(3, Config.patch_size, Config.patch_size)
 
         num_images = len(patches)
-        patches = patches.reshape(
-            num_images,
-            RGB_CHANNELS,
-            NUM_PATCHES,
-            PATCH_SIZE,
-            PATCH_SIZE
-        )
+        patches = patches.reshape(num_images, Config.rgb_channel, Config.num_patches, Config.patch_size, Config.patch_size)
         patches.transpose_(1, 2)
 
-        return patches.reshape(num_images, NUM_PATCHES, -1) / 255.0 - 0.5
+        return patches.reshape(num_images, Config.num_patches, -1) / 255.0 - 0.5
 
     def __call__(self, batch):
         x1, x2 = zip(*batch)
@@ -80,14 +73,14 @@ class CollateSingleImage(CollateFn):
 
 
 class Model(nn.Module):
-    def __init__(self, d_model, n_head, n_layers):
+    def __init__(self, d_model=Config.num_pixels, n_head=8, n_layers=6):
         super().__init__()
         # transformer
         encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=n_head)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
         # positional embedding
-        w_pos = torch.randn(NUM_PATCHES, d_model) / d_model ** 0.5
+        w_pos = torch.randn(Config.num_patches, d_model) / d_model ** 0.5
         cls_token = torch.randn(1, d_model) / d_model ** 0.5
         self.register_parameter("pos_embed", nn.Parameter(w_pos))
         self.register_parameter("cls_token", nn.Parameter(cls_token))
