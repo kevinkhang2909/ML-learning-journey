@@ -19,5 +19,5 @@ used as a learning resource and a way to lookup problems to solve specific probl
 [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/blob/main/analytic_pipeline/linear_factors_analysis.ipynb)
 - Data Mining on Market Basket Analysis (Apriori) - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/machine_learning/recommendation/apriori)
 
-## Mechanism for effective
+## Mechanism for effectiveness
 - [Blog](https://eugeneyan.com/writing/mechanisms-for-projects/) - How can we improve a machine learning project for both team members and my own projects
