@@ -41,7 +41,7 @@ for i, (text, cat) in enumerate(df[['text_edit', 'all_cat']].values):
     )
 bulk(es, bulk_data)
 es.indices.refresh(index=indexes)
-print(es.cat.count(index='movies', format='json'))
+print(es.cat.count(index=indexes, format='json'))
 
 # search
 for item in tqdm(df[['text_edit']].head(100_000).values[:]):
