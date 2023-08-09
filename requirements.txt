@@ -8,3 +8,5 @@ transformers
 scikit-learn
 statsmodels
 underthesea
+polars
+duckdb
