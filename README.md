@@ -9,11 +9,13 @@ used as a learning resource and a way to lookup problems to solve specific probl
 - Data Mining on Market Basket Analysis (Apriori) - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/machine_learning/recommendation/apriori)
 
 ## Recomendation
-- Apriori Data Mining - [Notebook]()
-- Content-based & Collaborative-filtering - [Notebook]() 
+- Apriori Data Mining - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/recommendation/apriori)
+- Content-based & Collaborative-filtering - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/recommendation) 
 
 ## Mechanism for effectiveness
 - How can we improve a machine learning project for both team members and my own projects - [Blog](https://eugeneyan.com/writing/mechanisms-for-projects/)
 
 ## Coding tips:
-- Coding tips for pandas, pythonic code - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/coding_tips)
+- Coding tips for Pandas - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/coding_tips/pandas)
+- Coding tips for Polars - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/coding_tips/polars)
+- Write more Pythonic code - [Notebook](https://github.com/kevinkhang2909/ML-learning-journey/tree/main/coding_tips/python)
