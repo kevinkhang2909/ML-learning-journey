@@ -105,7 +105,7 @@ def objective(trial, lgb_data, all_features, label_name, dataset):
 
 class Extract:
     @staticmethod
-    def month_day(df,col):
+    def month_day(df, col):
         return df.with_columns(
             pl.col(col).dt.year().alias('year').cast(pl.Int16),
             pl.col(col).dt.month().alias('month').cast(pl.Int8),
@@ -122,6 +122,8 @@ class Extract:
             pl.col('month').map(lambda x: np.cos(2 * np.pi * x / 12)).alias('month_cos'),
             pl.col('day').map(lambda x: np.sin(2 * np.pi * x / 31)).alias('day_sin'),
             pl.col('day').map(lambda x: np.cos(2 * np.pi * x / 31)).alias('day_cos'),
+            pl.col('hour').map(lambda x: np.sin(2 * np.pi * x / 24.0)).alias('hour_sin'),
+            pl.col('hour').map(lambda x: np.cos(2 * np.pi * x / 24.0)).alias('cos_sin'),
         )
 
     @staticmethod
