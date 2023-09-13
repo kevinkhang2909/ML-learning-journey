@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from func import Extract
 import lightgbm as lgb
 from itertools import groupby
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, average_precision_score
 
 
 path = Path.home() / 'OneDrive - Seagroup/ai/kaggle_dataset/child-mind-institute-detect-sleep-states'
@@ -48,14 +48,21 @@ model = lgb.train(param, train,
                   callbacks=[lgb.early_stopping(50, verbose=False)])
 preds = model.predict(X_test[all_features].to_numpy(), num_iteration=model.best_iteration)
 
-test = X_test[['series_id']].to_pandas().copy()
-test['score'] = np.where(preds > 0.5, 1, 0)
-test['label'] = y_test
-
-accuracy = accuracy_score(test['score'], test['label'])
-print(f'Accuracy: {accuracy}')
-print(classification_report(test['label'], test['score']))
-
+test = (
+    X_test[['series_id']]
+    .with_columns(
+        pl.Series(name='prob', values=preds),
+        pl.Series(name='true_label', values=y_test)
+    )
+)
+print(average_precision_score(y_test, preds))
+# test['preds'] = np.where(preds > 0.5, 1, 0)
+# test['label'] = y_test
+#
+# accuracy = accuracy_score(test['score'], test['label'])
+# print(f'Accuracy: {accuracy}')
+# print(classification_report(test['label'], test['score']))
+#
 zip_ = zip(all_features, model.feature_importance())
 feature_importance = (
     pl.DataFrame(zip_, schema=['feature', '# times the feature is used'])
@@ -63,8 +70,10 @@ feature_importance = (
     .to_pandas()
 )
 print(feature_importance)
+# print(average_precision_score(y_true, y_scores))
 
 # baseline
+# AP: 0.9873286644779671
 # Accuracy: 0.9034865806061912
 #               precision    recall  f1-score   support
 #            0       0.79      0.81      0.80   9853570
