@@ -1,6 +1,6 @@
 import polars as pl
 import numpy as np
-from pathlib import Path
+import seaborn as sns
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -143,3 +143,50 @@ class Extract:
         return df.with_columns(
             pl.col(i).shift(window).alias(f'shift_{window}d_{i}') for i in col
         )
+
+
+def check_null(df):
+    print(f"Before drop nulls: Shape{df.shape}, # series {df['series_id'].n_unique()}")
+    print(df.null_count())
+    df_drop = df.drop_nulls()
+    print(f"After drop nulls: Shape{df_drop.shape}, # series {df_drop['series_id'].n_unique()}")
+    return df_drop
+
+
+def plot(x, series_id, data, onset_time, wakeup_time, path):
+    fig, axes = plt.subplots(2, 1, figsize=(20, 10))
+    axes = axes.flatten()
+    for i, v in enumerate(['anglez', 'enmo']):
+        sns.lineplot(data=data, x=x, y=v, hue='is_wakeup', ax=axes[i])
+        for onset in onset_time:
+            axes[i].axvline(x=onset, color='r', linestyle='--', label='onset')
+        for wakeup in wakeup_time:
+            axes[i].axvline(x=wakeup, color='g', linestyle='--', label='wakeup')
+
+    # label
+    handles, labels = fig.gca().get_legend_handles_labels()
+    new_labels, new_handles = [], []
+    for handle, label in zip(handles, labels):
+        if label not in new_labels:
+            new_handles.append(handle)
+            new_labels.append(label)
+    for i, v in enumerate(['anglez', 'enmo']):
+        axes[i].legend(list(set(new_handles)), list(set(new_labels)), loc='upper right')
+
+    fig.suptitle(f'series id {series_id}', fontsize=16)
+    fig.tight_layout()
+
+    fig.savefig(path / f'media/time_series/{series_id}.png', dpi=300)
+    plt.close('all')
+    plt.close(fig)
+
+
+def eda_series(series_id, df_merge_full, df_csv, path):
+    filter_ = pl.col('series_id') == series_id
+    unit_merge = df_merge_full.filter(filter_)
+    unit_label = df_csv.filter(filter_)
+
+    onset_time = unit_label.filter(pl.col('event') == 'onset')['timestamp']
+    wakeup_time = unit_label.filter(pl.col('event') == 'wakeup')['timestamp']
+
+    plot('timestamp', series_id, unit_merge, onset_time, wakeup_time, path)
