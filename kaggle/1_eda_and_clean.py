@@ -74,13 +74,13 @@ print(df_merge_full.shape, df_merge_full['series_id'].n_unique())
 df_merge_full.write_parquet(path / 'clean.parquet', use_pyarrow=True)
 
 # plot series
-run = df_merge_full['series_id'].unique().to_list()
-f = partial(eda_series,  df_merge_full=df_merge_full, df_csv=df_csv, path=path)
-with tqdm(total=len(run)) as pbar:
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(f, arg): arg for arg in run}
-        results = {}
-        for future in as_completed(futures):
-            arg = futures[future]
-            results[arg] = future.result()
-            pbar.update(1)
+# run = df_merge_full['series_id'].unique().to_list()
+# f = partial(eda_series,  df_merge_full=df_merge_full, df_csv=df_csv, path=path)
+# with tqdm(total=len(run)) as pbar:
+#     with ThreadPoolExecutor(max_workers=6) as executor:
+#         futures = {executor.submit(f, arg): arg for arg in run}
+#         results = {}
+#         for future in as_completed(futures):
+#             arg = futures[future]
+#             results[arg] = future.result()
+#             pbar.update(1)
